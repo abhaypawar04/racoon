@@ -3,12 +3,14 @@ const cors = require("cors");
 require("dotenv").config();
 const documentRoutes = require("./routes/documentRoutes");
 const connectDB = require("./config/db");
+const ragRoutes = require("./routes/ragRoutes");
 
 const app = express();
 
 app.use(cors());
 app.use("/api/documents", documentRoutes);
 app.use(express.json());
+app.use("/api/rag", ragRoutes);
 
 app.get("/", (req, res) => {
   res.json({

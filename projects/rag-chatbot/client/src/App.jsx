@@ -1,122 +1,100 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState, useEffect } from "react";
+
+import Sidebar from "./components/Sidebar";
+import ChatInterface from "./components/ChatInterface";
+import { getDocuments } from "./services/api";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [documents, setDocuments] = useState([]);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Normalize document data
+  const normalizeDocument = (doc) => ({
+    ...doc,
+    id: doc.id || doc._id,
+    name: doc.name || doc.originalName,
+  });
+
+  // Load previously uploaded documents
+  useEffect(() => {
+    const loadDocuments = async () => {
+      try {
+        const result = await getDocuments();
+        const loadedDocuments = (result.documents || []).map(normalizeDocument);
+
+        setDocuments(loadedDocuments);
+      } catch (err) {
+        console.error("Document loading error:", err);
+        setError("Unable to load documents. Please check your backend server.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDocuments();
+  }, []);
+
+  // Handle successful PDF upload
+  const handleUploadSuccess = (uploadedDocument) => {
+    const newDocument = normalizeDocument(uploadedDocument);
+
+    setDocuments((previous) => [
+      newDocument,
+      ...previous.filter((doc) => doc.id !== newDocument.id),
+    ]);
+
+    setSelectedDocument(newDocument);
+    setError("");
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="flex h-screen overflow-hidden bg-[#f4f4f4]">
+      {/* Sidebar */}
+      <aside className="hidden w-80 shrink-0 md:block">
+        <Sidebar
+          documents={documents}
+          selectedDocument={selectedDocument}
+          onSelect={setSelectedDocument}
+          onUploadSuccess={handleUploadSuccess}
+          loading={loading}
+        />
+      </aside>
 
-      <div className="ticks"></div>
+      {/* Main workspace */}
+      <main className="flex min-w-0 flex-1 flex-col">
+        {/* Workspace header */}
+        <header className="flex h-[73px] shrink-0 items-center justify-between border-b border-[#e0e0e0] bg-white px-6">
+          <div>
+            <h2 className="font-semibold text-[#161616]">PDF Workspace</h2>
+            <p className="text-xs text-[#6f6f6f]">
+              Ask questions and explore your documents
+            </p>
+          </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-[#198038]" />
+            <span className="text-xs font-medium text-[#525252]">
+              Local AI Workspace
+            </span>
+          </div>
+        </header>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {/* Error notification */}
+        {error && (
+          <div className="bg-[#fff1f1] px-6 py-3 text-sm text-[#da1e28]">
+            {error}
+          </div>
+        )}
+
+        {/* Chat interface */}
+        <div className="min-h-0 flex-1">
+          <ChatInterface selectedDocument={selectedDocument} />
+        </div>
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
